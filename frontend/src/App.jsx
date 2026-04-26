@@ -43,12 +43,16 @@ export default function App() {
   const { user, loading, logout } = useAuth()
   const { activeTab } = useStore()
   const [authPage, setAuthPage] = useState('login')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const handler = () => logout()
     window.addEventListener('auth:logout', handler)
     return () => window.removeEventListener('auth:logout', handler)
   }, [logout])
+
+  // Close sidebar on tab change
+  useEffect(() => { setSidebarOpen(false) }, [activeTab])
 
   if (loading) {
     return (
@@ -71,10 +75,10 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-bg-primary overflow-hidden">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6">
           <Page />
         </main>
       </div>

@@ -131,7 +131,7 @@ export default function AdminPage() {
         </form>
       )}
 
-      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden">
+      <div className="bg-bg-secondary border border-bg-border rounded-xl overflow-hidden overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-sm text-text-muted">Loading users...</div>
         ) : users.length === 0 ? (

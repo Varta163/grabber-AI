@@ -1,9 +1,9 @@
-import { RefreshCw, PlayCircle, LogOut } from 'lucide-react'
+import { RefreshCw, PlayCircle, LogOut, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { runAll } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { user, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState(null)
@@ -23,32 +23,41 @@ export default function Header() {
   }
 
   return (
-    <header className="h-12 border-b border-bg-border bg-bg-secondary flex items-center justify-end px-6 gap-3 sticky top-0 z-10">
-      {status && (
-        <span className="text-xs text-accent-green animate-fade-in">{status}</span>
-      )}
+    <header className="h-12 border-b border-bg-border bg-bg-secondary flex items-center justify-between px-4 md:px-6 gap-3 sticky top-0 z-10">
+      {/* Mobile hamburger */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden p-1.5 rounded hover:bg-bg-hover transition-colors text-text-muted hover:text-text-primary"
+      >
+        <Menu size={16} />
+      </button>
 
-      {user?.role === 'admin' && (
-        <button
-          onClick={handleRunAll}
-          disabled={running}
-          className="btn-ghost flex items-center gap-1.5 text-xs disabled:opacity-50"
-          title="Fetch + Process + Generate Brief"
-        >
-          {running ? <RefreshCw size={13} className="animate-spin" /> : <PlayCircle size={13} />}
-          {running ? 'Running...' : 'Run Pipeline'}
-        </button>
-      )}
+      <div className="flex items-center gap-3 ml-auto">
+        {status && (
+          <span className="text-xs text-accent-green hidden sm:block">{status}</span>
+        )}
 
-      <div className="flex items-center gap-2 pl-2 border-l border-bg-border">
-        <span className="text-xs text-text-muted">{user?.email}</span>
-        <button
-          onClick={logout}
-          title="Sign out"
-          className="p-1.5 rounded hover:bg-bg-hover transition-colors text-text-muted hover:text-text-primary"
-        >
-          <LogOut size={13} />
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            onClick={handleRunAll}
+            disabled={running}
+            className="btn-ghost flex items-center gap-1.5 text-xs disabled:opacity-50"
+          >
+            {running ? <RefreshCw size={13} className="animate-spin" /> : <PlayCircle size={13} />}
+            <span className="hidden sm:inline">{running ? 'Running...' : 'Run Pipeline'}</span>
+          </button>
+        )}
+
+        <div className="flex items-center gap-2 pl-2 border-l border-bg-border">
+          <span className="text-xs text-text-muted hidden sm:block truncate max-w-36">{user?.email}</span>
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="p-1.5 rounded hover:bg-bg-hover transition-colors text-text-muted hover:text-text-primary"
+          >
+            <LogOut size={13} />
+          </button>
+        </div>
       </div>
     </header>
   )

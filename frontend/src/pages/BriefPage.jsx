@@ -50,7 +50,7 @@ export default function BriefPage() {
 
       {/* Category breakdown */}
       {dailyBrief.category_breakdown && (
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {Object.entries(dailyBrief.category_breakdown).map(([cat, count]) => (
             <div key={cat} className="card text-center p-3">
               <p className="text-lg font-bold text-text-primary">{count}</p>
