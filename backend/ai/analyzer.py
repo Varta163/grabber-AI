@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,13 @@ def process_pending(db: Session, batch_size: int = 20) -> dict:
 
     for raw in items:
         try:
+            # Skip if a processed entry already exists (handles retry after rollback)
+            if db.query(ProcessedContent).filter_by(raw_id=raw.id).first():
+                raw.is_processed = True
+                db.commit()
+                skipped += 1
+                continue
+
             clean = clean_content(raw.content or "")
             truncated = truncate_for_ai(f"{raw.title}\n\n{clean}")
             source_name = raw.source.name if raw.source else "Unknown"
@@ -110,7 +118,7 @@ def run_trend_detection(db: Session, hours: int = 24) -> list:
     return saved
 
 
-def build_daily_brief(db: Session) -> dict | None:
+def build_daily_brief(db: Session) -> Optional[dict]:
     """Build today's daily brief from processed content."""
     from datetime import timedelta
 

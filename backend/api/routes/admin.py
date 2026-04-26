@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
-from db.connection import get_db
+from db.connection import get_db, SessionLocal
 from fetch.rss_fetcher import fetch_all_rss
 from fetch.scraper import scrape_all
 from ai.analyzer import process_pending, run_trend_detection, build_daily_brief
@@ -32,17 +32,20 @@ def trigger_brief(db: Session = Depends(get_db)):
     return build_daily_brief(db)
 
 
+def _run_pipeline_bg():
+    db = SessionLocal()
+    try:
+        fetch_all_rss(db)
+        scrape_all(db)
+        process_pending(db, batch_size=50)
+        run_trend_detection(db)
+        build_daily_brief(db)
+    finally:
+        db.close()
+
+
 @router.post("/run-all")
-def run_full_pipeline(db: Session = Depends(get_db)):
-    """Run entire pipeline: fetch → process → trends → brief."""
-    rss = fetch_all_rss(db)
-    scrape = scrape_all(db)
-    processing = process_pending(db, batch_size=50)
-    trends = run_trend_detection(db)
-    brief = build_daily_brief(db)
-    return {
-        "fetch": {"rss": rss, "scrape": scrape},
-        "processing": processing,
-        "trends_detected": len(trends),
-        "brief_generated": brief is not None,
-    }
+def run_full_pipeline(background_tasks: BackgroundTasks):
+    """Kick off the full pipeline in the background and return immediately."""
+    background_tasks.add_task(_run_pipeline_bg)
+    return {"status": "pipeline started"}

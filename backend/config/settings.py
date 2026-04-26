@@ -11,7 +11,7 @@ DATABASE_URL = os.getenv(
 
 # Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # App
 APP_ENV = os.getenv("APP_ENV", "development")

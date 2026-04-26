@@ -3,14 +3,17 @@ import logging
 import time
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config.settings import GEMINI_API_KEY, GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=GEMINI_API_KEY)
-_model = genai.GenerativeModel(GEMINI_MODEL)
+_client = genai.Client(
+    api_key=GEMINI_API_KEY,
+    http_options=types.HttpOptions(api_version="v1"),
+)
 
 _ANALYSIS_PROMPT = """Analyze this tech/AI content and return ONLY valid JSON with no markdown formatting.
 
@@ -80,7 +83,10 @@ Suggest concrete tools, resources, or actions. Keep it under 200 words."""
 def _call_gemini(prompt: str, retries: int = 3) -> Optional[str]:
     for attempt in range(retries):
         try:
-            response = _model.generate_content(prompt)
+            response = _client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+            )
             return response.text
         except Exception as exc:
             if attempt < retries - 1:

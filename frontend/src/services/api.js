@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api', timeout: 15000 })
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_API_URL || ''}/api`,
+  timeout: 15000,
+})
 
 export const getLatest = (params = {}) => api.get('/latest', { params })
 export const getTrending = (params = {}) => api.get('/trending', { params })
