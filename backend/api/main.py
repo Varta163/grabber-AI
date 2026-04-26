@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from config.settings import CORS_ORIGINS
 from db.connection import init_db
-from api.routes import content, chat, admin
+from api.routes import content, chat, admin, auth, admin_users
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,6 +56,8 @@ def health():
     return {"status": "ok", "service": "GrabberAI"}
 
 
+app.include_router(auth.router, prefix="/api", tags=["Auth"])
 app.include_router(content.router, prefix="/api", tags=["Content"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_users.router, prefix="/api/admin", tags=["Admin Users"])

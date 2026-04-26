@@ -1,8 +1,10 @@
-import { RefreshCw, PlayCircle } from 'lucide-react'
+import { RefreshCw, PlayCircle, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { runAll } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 
 export default function Header() {
+  const { user, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState(null)
 
@@ -10,8 +12,8 @@ export default function Header() {
     setRunning(true)
     setStatus(null)
     try {
-      const { data } = await runAll()
-      setStatus(`Fetched ${data.fetch?.rss?.total_new || 0} new items · Processed ${data.processing?.processed || 0}`)
+      await runAll()
+      setStatus('Pipeline started — refresh in ~2 min')
       setTimeout(() => setStatus(null), 5000)
     } catch {
       setStatus('Error running pipeline')
@@ -25,18 +27,29 @@ export default function Header() {
       {status && (
         <span className="text-xs text-accent-green animate-fade-in">{status}</span>
       )}
-      <button
-        onClick={handleRunAll}
-        disabled={running}
-        className="btn-ghost flex items-center gap-1.5 text-xs disabled:opacity-50"
-        title="Fetch + Process + Generate Brief"
-      >
-        {running
-          ? <RefreshCw size={13} className="animate-spin" />
-          : <PlayCircle size={13} />
-        }
-        {running ? 'Running...' : 'Run Pipeline'}
-      </button>
+
+      {user?.role === 'admin' && (
+        <button
+          onClick={handleRunAll}
+          disabled={running}
+          className="btn-ghost flex items-center gap-1.5 text-xs disabled:opacity-50"
+          title="Fetch + Process + Generate Brief"
+        >
+          {running ? <RefreshCw size={13} className="animate-spin" /> : <PlayCircle size={13} />}
+          {running ? 'Running...' : 'Run Pipeline'}
+        </button>
+      )}
+
+      <div className="flex items-center gap-2 pl-2 border-l border-bg-border">
+        <span className="text-xs text-text-muted">{user?.email}</span>
+        <button
+          onClick={logout}
+          title="Sign out"
+          className="p-1.5 rounded hover:bg-bg-hover transition-colors text-text-muted hover:text-text-primary"
+        >
+          <LogOut size={13} />
+        </button>
+      </div>
     </header>
   )
 }

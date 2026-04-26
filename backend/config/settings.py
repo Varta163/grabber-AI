@@ -26,3 +26,9 @@ CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 # Gemini rate limiting
 MAX_TOKENS_PER_CHUNK = 3000
 MAX_CONCURRENT_AI_CALLS = 5
+
+# Auth
+JWT_SECRET = os.getenv("JWT_SECRET", "changeme-set-a-real-secret-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "72"))
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")

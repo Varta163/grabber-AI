@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from db.connection import get_db
-from db.models import DailyBrief, ProcessedContent, Trend
+from db.models import DailyBrief, ProcessedContent, Trend, User
+from api.dependencies import require_subscription
 
 router = APIRouter()
 
@@ -34,6 +35,7 @@ def get_latest(
     category: Optional[str] = Query(None),
     min_impact: Optional[float] = Query(None, ge=1, le=10),
     db: Session = Depends(get_db),
+    _: User = Depends(require_subscription),
 ):
     query = db.query(ProcessedContent).order_by(ProcessedContent.processed_at.desc())
 
@@ -58,6 +60,7 @@ def get_trending(
     limit: int = Query(10, ge=1, le=50),
     hours: int = Query(24, ge=1, le=168),
     db: Session = Depends(get_db),
+    _: User = Depends(require_subscription),
 ):
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
@@ -101,6 +104,7 @@ def get_trending(
 def get_categories(
     hours: int = Query(24, ge=1, le=168),
     db: Session = Depends(get_db),
+    _: User = Depends(require_subscription),
 ):
     cutoff = datetime.utcnow() - timedelta(hours=hours)
     categories = ["AI", "Dev", "Design", "Jobs", "Market"]
@@ -126,7 +130,7 @@ def get_categories(
 
 
 @router.get("/daily-brief")
-def get_daily_brief(db: Session = Depends(get_db)):
+def get_daily_brief(db: Session = Depends(get_db), _: User = Depends(require_subscription)):
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     brief = db.query(DailyBrief).filter(DailyBrief.date >= today).first()
 
@@ -147,7 +151,7 @@ def get_daily_brief(db: Session = Depends(get_db)):
 
 
 @router.get("/item/{item_id}")
-def get_item(item_id: int, db: Session = Depends(get_db)):
+def get_item(item_id: int, db: Session = Depends(get_db), _: User = Depends(require_subscription)):
     item = db.query(ProcessedContent).filter(ProcessedContent.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")

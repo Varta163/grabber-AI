@@ -24,6 +24,8 @@ const useStore = create((set, get) => ({
   // UI
   activeTab: 'feed',
   sidebarOpen: true,
+  authPage: 'login',
+  setAuthPage: (page) => set({ authPage: page }),
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setFeedCategory: (cat) => set({ feedCategory: cat, feedOffset: 0, feedItems: [] }),

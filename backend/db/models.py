@@ -107,3 +107,15 @@ class DailyBrief(Base):
     generated_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (Index("ix_daily_briefs_date", "date"),)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), default="user")  # user, admin
+    subscription_status = Column(String(20), default="none")  # none, free, subscribed
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

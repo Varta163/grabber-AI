@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from ai.gemini_client import chat_with_context
 from db.connection import get_db
-from db.models import ProcessedContent
+from db.models import ProcessedContent, User
+from api.dependencies import require_subscription
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest, db: Session = Depends(get_db)):
+def chat(req: ChatRequest, db: Session = Depends(get_db), _: User = Depends(require_subscription)):
     cutoff = datetime.utcnow() - timedelta(hours=48)
     context_items = (
         db.query(ProcessedContent)
