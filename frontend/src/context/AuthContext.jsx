@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { loginUser, signupUser, getMe } from '../services/api'
+import useStore from '../store/useStore'
 
 const AuthContext = createContext(null)
 
@@ -42,6 +43,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('grabber_token')
     setUser(null)
+    useStore.getState().clearUserData()
   }
 
   return (

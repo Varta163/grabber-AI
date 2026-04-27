@@ -51,6 +51,19 @@ const useStore = create((set, get) => ({
   addChatMessage: (msg) =>
     set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
   setChatLoading: (v) => set({ chatLoading: v }),
+
+  clearUserData: () => set({
+    chatMessages: [],
+    chatLoading: false,
+    feedItems: [],
+    feedTotal: 0,
+    feedOffset: 0,
+    feedCategory: null,
+    dailyBrief: null,
+    trendingStories: [],
+    detectedTrends: [],
+    activeTab: 'feed',
+  }),
 }))
 
 export default useStore
