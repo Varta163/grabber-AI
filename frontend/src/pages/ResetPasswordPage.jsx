@@ -4,7 +4,9 @@ import { resetPassword } from '../services/api'
 
 export default function ResetPasswordPage({ token, onDone }) {
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState(null)
@@ -12,6 +14,7 @@ export default function ResetPasswordPage({ token, onDone }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (password !== confirm) { setError('Passwords do not match'); return }
     setError(null)
     setLoading(true)
     try {
@@ -23,6 +26,9 @@ export default function ResetPasswordPage({ token, onDone }) {
       setLoading(false)
     }
   }
+
+  const passwordsTyped = password.length > 0 && confirm.length > 0
+  const mismatch = passwordsTyped && password !== confirm
 
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
@@ -69,6 +75,34 @@ export default function ResetPasswordPage({ token, onDone }) {
                     </button>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1.5">Confirm password</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      required
+                      className={`w-full bg-bg-primary border rounded-lg px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none transition-colors ${
+                        mismatch ? 'border-red-400 focus:border-red-400' : 'border-bg-border focus:border-accent-blue'
+                      }`}
+                      placeholder="Re-enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-text-muted hover:text-text-secondary transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  {mismatch && (
+                    <p className="text-xs text-red-400 mt-1">Passwords do not match</p>
+                  )}
+                </div>
+
                 {error && (
                   <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
                     {error}
@@ -76,7 +110,7 @@ export default function ResetPasswordPage({ token, onDone }) {
                 )}
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || mismatch}
                   className="w-full bg-accent-blue hover:bg-accent-blue/90 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Updating...' : 'Update password'}
