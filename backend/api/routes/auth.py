@@ -12,7 +12,8 @@ from passlib.context import CryptContext
 
 from config.settings import (
     JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_HOURS, ADMIN_EMAIL,
-    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL, APP_URL, RESEND_API_KEY,
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL, APP_URL,
+    RESEND_API_KEY, BREVO_API_KEY,
 )
 from db.connection import get_db
 from db.models import User
@@ -21,6 +22,29 @@ from api.dependencies import get_current_user
 router = APIRouter()
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = logging.getLogger(__name__)
+
+
+def _send_via_brevo(to_email: str, reset_link: str):
+    import httpx
+    html = f"""
+<html><body style="font-family:sans-serif;color:#1a1a1a">
+<h2>Reset your GrabberAI password</h2>
+<p>Click the button below to choose a new password. The link expires in 1 hour.</p>
+<a href="{reset_link}" style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Reset Password</a>
+<p style="margin-top:16px;font-size:12px;color:#666">If you didn't request this, you can ignore this email.</p>
+</body></html>"""
+    resp = httpx.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+        json={
+            "sender": {"name": "GrabberAI", "email": FROM_EMAIL},
+            "to": [{"email": to_email}],
+            "subject": "Reset your GrabberAI password",
+            "htmlContent": html,
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
 
 
 def _send_via_resend(to_email: str, reset_link: str):
@@ -108,6 +132,14 @@ class ResetPasswordRequest(BaseModel):
 def _send_reset_email(to_email: str, token: str):
     reset_link = f"{APP_URL}?reset_token={token}"
     logger.info("🔑 PASSWORD RESET LINK for %s: %s", to_email, reset_link)
+
+    if BREVO_API_KEY:
+        try:
+            _send_via_brevo(to_email, reset_link)
+            logger.info("Reset email sent via Brevo to %s", to_email)
+        except Exception as exc:
+            logger.error("❌ Brevo failed for %s: %s", to_email, exc)
+        return
 
     if RESEND_API_KEY:
         try:
