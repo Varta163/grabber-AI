@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Cpu } from 'lucide-react'
+import { Cpu, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-export default function LoginPage({ onSwitch }) {
+export default function LoginPage({ onSwitch, onForgot }) {
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -50,14 +51,24 @@ export default function LoginPage({ onSwitch }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue transition-colors"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue transition-colors"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-text-muted hover:text-text-secondary transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -75,7 +86,12 @@ export default function LoginPage({ onSwitch }) {
             </button>
           </form>
 
-          <p className="text-xs text-text-muted text-center mt-5">
+          <p className="text-xs text-text-muted text-center mt-4">
+            <button onClick={onForgot} className="text-accent-blue hover:underline">
+              Forgot password?
+            </button>
+          </p>
+          <p className="text-xs text-text-muted text-center mt-2">
             No account?{' '}
             <button onClick={onSwitch} className="text-accent-blue hover:underline">
               Sign up

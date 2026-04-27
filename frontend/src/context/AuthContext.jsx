@@ -30,13 +30,22 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
+  const refreshUser = async () => {
+    const token = localStorage.getItem('grabber_token')
+    if (!token) return
+    try {
+      const { data } = await getMe()
+      setUser(data)
+    } catch {}
+  }
+
   const logout = () => {
     localStorage.removeItem('grabber_token')
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
