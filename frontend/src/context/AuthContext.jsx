@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await loginUser(email, password)
+    useStore.getState().clearUserData()
     localStorage.setItem('grabber_token', data.token)
     setUser(data.user)
     return data.user
@@ -26,6 +27,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (email, password) => {
     const { data } = await signupUser(email, password)
+    useStore.getState().clearUserData()
     localStorage.setItem('grabber_token', data.token)
     setUser(data.user)
     return data.user
