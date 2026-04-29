@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import LandingPage from './pages/LandingPage'
 import useStore from './store/useStore'
 import { useAuth } from './context/AuthContext'
 
@@ -59,6 +60,9 @@ export default function App() {
   const { activeTab } = useStore()
   const [authPage, setAuthPage] = useState('login')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showLanding, setShowLanding] = useState(() => {
+    return !sessionStorage.getItem('landing_passed')
+  })
 
   // Detect ?reset_token=... in the URL on first load
   const [resetToken] = useState(() => {
@@ -74,6 +78,15 @@ export default function App() {
 
   // Close sidebar on tab change
   useEffect(() => { setSidebarOpen(false) }, [activeTab])
+
+  if (showLanding) {
+    return (
+      <LandingPage onEnter={() => {
+        sessionStorage.setItem('landing_passed', '1')
+        setShowLanding(false)
+      }} />
+    )
+  }
 
   if (loading) {
     return (
