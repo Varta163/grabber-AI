@@ -2,17 +2,68 @@ import { useState, useEffect, useRef } from 'react'
 import { Cpu } from 'lucide-react'
 
 // ── Brain canvas animation ──────────────────────────────────────────────────
+// Nodes distributed in a wide brain shape (cerebrum + cerebellum)
 const RAW_NODES = [
-  { x: 200, y: 76 },
-  { x: 152, y: 96 }, { x: 200, y: 89 }, { x: 248, y: 96 },
-  { x: 118, y: 132 }, { x: 163, y: 113 }, { x: 206, y: 109 }, { x: 249, y: 115 }, { x: 286, y: 134 },
-  { x: 103, y: 170 }, { x: 143, y: 154 }, { x: 184, y: 147 }, { x: 225, y: 151 }, { x: 264, y: 157 }, { x: 295, y: 172 },
-  { x: 113, y: 210 }, { x: 153, y: 198 }, { x: 193, y: 191 }, { x: 234, y: 195 }, { x: 271, y: 206 },
-  { x: 139, y: 240 }, { x: 179, y: 232 }, { x: 219, y: 233 }, { x: 255, y: 240 },
-  { x: 173, y: 264 }, { x: 214, y: 267 },
-  { x: 194, y: 294 },
+  // Left hemisphere — top crown
+  { x: 148, y: 90 }, { x: 175, y: 80 },
+  // Left hemisphere — upper
+  { x: 108, y: 118 }, { x: 140, y: 104 }, { x: 170, y: 97 },
+  // Left hemisphere — upper-mid
+  { x: 84, y: 150 }, { x: 116, y: 134 }, { x: 148, y: 124 }, { x: 178, y: 118 },
+  // Left hemisphere — mid
+  { x: 76, y: 182 }, { x: 108, y: 166 }, { x: 140, y: 156 }, { x: 172, y: 150 }, { x: 194, y: 148 },
+  // Left hemisphere — lower-mid
+  { x: 82, y: 214 }, { x: 113, y: 200 }, { x: 144, y: 190 }, { x: 174, y: 184 }, { x: 194, y: 182 },
+  // Left hemisphere — lower
+  { x: 98, y: 242 }, { x: 128, y: 230 }, { x: 158, y: 222 }, { x: 186, y: 217 },
+  // Left hemisphere — bottom
+  { x: 120, y: 262 }, { x: 152, y: 255 }, { x: 180, y: 250 },
+
+  // Right hemisphere — top crown (mirror)
+  { x: 225, y: 80 }, { x: 252, y: 90 },
+  // Right hemisphere — upper
+  { x: 230, y: 97 }, { x: 260, y: 104 }, { x: 292, y: 118 },
+  // Right hemisphere — upper-mid
+  { x: 222, y: 118 }, { x: 252, y: 124 }, { x: 284, y: 134 }, { x: 316, y: 150 },
+  // Right hemisphere — mid
+  { x: 206, y: 148 }, { x: 228, y: 150 }, { x: 260, y: 156 }, { x: 292, y: 166 }, { x: 324, y: 182 },
+  // Right hemisphere — lower-mid
+  { x: 206, y: 182 }, { x: 226, y: 184 }, { x: 256, y: 190 }, { x: 287, y: 200 }, { x: 318, y: 214 },
+  // Right hemisphere — lower
+  { x: 214, y: 217 }, { x: 242, y: 222 }, { x: 272, y: 230 }, { x: 302, y: 242 },
+  // Right hemisphere — bottom
+  { x: 220, y: 250 }, { x: 248, y: 255 }, { x: 280, y: 262 },
+
+  // Cerebellum
+  { x: 165, y: 278 }, { x: 188, y: 285 }, { x: 200, y: 288 }, { x: 212, y: 285 }, { x: 235, y: 278 },
+  { x: 182, y: 302 }, { x: 200, y: 307 }, { x: 218, y: 302 },
 ]
-const ORANGE_IDX = new Set([0, 5, 14, 19, 24])
+// Orange energy nodes: corners + cerebellum center
+const ORANGE_IDX = new Set([1, 26, 9, 35, 47, 21, 42])
+
+function brainOutlinePath(ctx, s) {
+  ctx.beginPath()
+  ctx.moveTo(200 * s, 70 * s)
+  // Left arc: top → left side → bottom-left
+  ctx.bezierCurveTo(176 * s, 65 * s, 144 * s, 70 * s, 118 * s, 88 * s)
+  ctx.bezierCurveTo(92 * s, 106 * s, 74 * s, 134 * s, 70 * s, 165 * s)
+  ctx.bezierCurveTo(66 * s, 196 * s, 78 * s, 228 * s, 100 * s, 250 * s)
+  ctx.bezierCurveTo(118 * s, 267 * s, 144 * s, 274 * s, 164 * s, 273 * s)
+  // Cerebellum left bump
+  ctx.bezierCurveTo(172 * s, 272 * s, 176 * s, 280 * s, 174 * s, 293 * s)
+  ctx.bezierCurveTo(172 * s, 307 * s, 183 * s, 318 * s, 195 * s, 320 * s)
+  ctx.lineTo(200 * s, 321 * s)
+  ctx.lineTo(205 * s, 320 * s)
+  // Cerebellum right bump
+  ctx.bezierCurveTo(217 * s, 318 * s, 228 * s, 307 * s, 226 * s, 293 * s)
+  ctx.bezierCurveTo(224 * s, 280 * s, 228 * s, 272 * s, 236 * s, 273 * s)
+  // Right arc: bottom-right → right side → top
+  ctx.bezierCurveTo(256 * s, 274 * s, 282 * s, 267 * s, 300 * s, 250 * s)
+  ctx.bezierCurveTo(322 * s, 228 * s, 334 * s, 196 * s, 330 * s, 165 * s)
+  ctx.bezierCurveTo(326 * s, 134 * s, 308 * s, 106 * s, 282 * s, 88 * s)
+  ctx.bezierCurveTo(256 * s, 70 * s, 224 * s, 65 * s, 200 * s, 70 * s)
+  ctx.closePath()
+}
 
 function BrainCanvas({ size }) {
   const canvasRef = useRef(null)
@@ -24,9 +75,8 @@ function BrainCanvas({ size }) {
 
     const nodes = RAW_NODES.map(n => ({ x: n.x * s, y: n.y * s }))
 
-    // Build connections (nearby nodes)
     const conns = []
-    const maxD = 92 * s
+    const maxD = 78 * s
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = nodes[i].x - nodes[j].x
@@ -35,11 +85,10 @@ function BrainCanvas({ size }) {
       }
     }
 
-    // Particles (one per connection, staggered)
-    const parts = conns.map((c, i) => ({
-      conn: c,
-      t: (i / conns.length),
-      speed: 0.0018 + Math.random() * 0.0025,
+    const parts = conns.map((_, i) => ({
+      conn: conns[i],
+      t: i / conns.length,
+      speed: 0.0015 + Math.random() * 0.002,
     }))
 
     const phases = nodes.map(() => Math.random() * Math.PI * 2)
@@ -49,75 +98,114 @@ function BrainCanvas({ size }) {
       const t = ts / 1000
       ctx.clearRect(0, 0, size, size)
 
-      // Brain body glow
-      const bg = ctx.createRadialGradient(size * .5, size * .46, 0, size * .5, size * .46, size * .43)
-      bg.addColorStop(0, 'rgba(12,25,70,.28)')
-      bg.addColorStop(.65, 'rgba(8,15,50,.14)')
-      bg.addColorStop(1, 'transparent')
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.7)
+
+      // ── Brain silhouette fill ──
+      brainOutlinePath(ctx, s)
+      const bg = ctx.createRadialGradient(200*s, 185*s, 0, 200*s, 185*s, 160*s)
+      bg.addColorStop(0, `rgba(14,28,80,${0.55 + pulse * 0.08})`)
+      bg.addColorStop(0.6, `rgba(8,16,52,${0.38})`)
+      bg.addColorStop(1, 'rgba(4,8,30,0.15)')
       ctx.fillStyle = bg
-      ctx.beginPath()
-      ctx.ellipse(size * .5, size * .46, size * .43, size * .39, 0, 0, Math.PI * 2)
       ctx.fill()
 
-      // Pulsing outer ring
-      const pulse = .5 + .5 * Math.sin(t * .7)
-      ctx.beginPath()
-      ctx.ellipse(size * .5, size * .46, size * .45, size * .41, 0, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(59,130,246,${.07 + pulse * .07})`
-      ctx.lineWidth = 1.5
+      // ── Brain outline glow ──
+      ctx.save()
+      ctx.shadowBlur = 18 * s
+      ctx.shadowColor = `rgba(59,130,246,${0.45 + pulse * 0.25})`
+      brainOutlinePath(ctx, s)
+      ctx.strokeStyle = `rgba(59,130,246,${0.35 + pulse * 0.2})`
+      ctx.lineWidth = 1.8 * s
       ctx.stroke()
+      ctx.restore()
 
-      // Connections
+      // ── Longitudinal fissure (centre groove) ──
+      ctx.save()
+      ctx.strokeStyle = `rgba(20,50,120,0.6)`
+      ctx.lineWidth = 1.2 * s
+      ctx.beginPath()
+      ctx.moveTo(200 * s, 70 * s)
+      ctx.bezierCurveTo(198 * s, 130 * s, 197 * s, 175 * s, 199 * s, 215 * s)
+      ctx.stroke()
+      ctx.restore()
+
+      // ── Sulci (brain groove lines) ──
+      ctx.save()
+      ctx.strokeStyle = 'rgba(40,80,180,0.22)'
+      ctx.lineWidth = 1.0 * s
+      // Left hemisphere sulci
+      const leftSulci = [
+        [[115,105],[122,135],[112,165]],
+        [[155,92],[150,125],[144,158],[135,188]],
+        [[82,198],[112,208],[145,212],[174,210]],
+      ]
+      leftSulci.forEach(pts => {
+        ctx.beginPath()
+        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0]*s, pts[i][1]*s)
+        ctx.stroke()
+      })
+      // Right hemisphere sulci (mirror)
+      const rightSulci = [
+        [[285,105],[278,135],[288,165]],
+        [[245,92],[250,125],[256,158],[265,188]],
+        [[318,198],[288,208],[255,212],[226,210]],
+      ]
+      rightSulci.forEach(pts => {
+        ctx.beginPath()
+        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0]*s, pts[i][1]*s)
+        ctx.stroke()
+      })
+      ctx.restore()
+
+      // ── Neural connections ──
       conns.forEach(([a, b]) => {
-        const alpha = .06 + .05 * Math.sin(t * .4 + a)
+        const alpha = 0.07 + 0.05 * Math.sin(t * 0.4 + a)
         ctx.beginPath()
         ctx.moveTo(nodes[a].x, nodes[a].y)
         ctx.lineTo(nodes[b].x, nodes[b].y)
-        ctx.strokeStyle = `rgba(100,165,255,${alpha})`
-        ctx.lineWidth = .8
+        ctx.strokeStyle = `rgba(110,170,255,${alpha})`
+        ctx.lineWidth = 0.8 * s
         ctx.stroke()
       })
 
-      // Particles
+      // ── Travelling particles ──
       parts.forEach(p => {
         p.t += p.speed
         if (p.t > 1) p.t = 0
         const [ai, bi] = p.conn
         const px = nodes[ai].x + (nodes[bi].x - nodes[ai].x) * p.t
         const py = nodes[ai].y + (nodes[bi].y - nodes[ai].y) * p.t
-
         const pg = ctx.createRadialGradient(px, py, 0, px, py, 5 * s)
-        pg.addColorStop(0, 'rgba(180,215,255,.95)')
+        pg.addColorStop(0, 'rgba(190,220,255,0.95)')
         pg.addColorStop(1, 'transparent')
         ctx.fillStyle = pg
         ctx.beginPath()
         ctx.arc(px, py, 5 * s, 0, Math.PI * 2)
         ctx.fill()
-
         ctx.beginPath()
-        ctx.arc(px, py, 1.8 * s, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(230,242,255,.98)'
+        ctx.arc(px, py, 1.6 * s, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(235,245,255,0.98)'
         ctx.fill()
       })
 
-      // Nodes
+      // ── Nodes ──
       nodes.forEach((n, i) => {
         const isOrange = ORANGE_IDX.has(i)
-        const p = .5 + .5 * Math.sin(t * 1.6 + phases[i])
-        const rgb = isOrange ? '245,158,11' : '59,130,246'
-        const r = (isOrange ? 5.5 : 3.5) * s
-
-        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4.5)
-        ng.addColorStop(0, `rgba(${rgb},${.55 + p * .35})`)
+        const p = 0.5 + 0.5 * Math.sin(t * 1.6 + phases[i])
+        const rgb = isOrange ? '245,158,11' : '80,160,255'
+        const r = (isOrange ? 5.5 : 3.2) * s
+        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5)
+        ng.addColorStop(0, `rgba(${rgb},${0.6 + p * 0.35})`)
         ng.addColorStop(1, 'transparent')
         ctx.fillStyle = ng
         ctx.beginPath()
-        ctx.arc(n.x, n.y, r * 4.5, 0, Math.PI * 2)
+        ctx.arc(n.x, n.y, r * 5, 0, Math.PI * 2)
         ctx.fill()
-
         ctx.beginPath()
-        ctx.arc(n.x, n.y, r * (.7 + p * .3), 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${rgb},${.8 + p * .2})`
+        ctx.arc(n.x, n.y, r * (0.65 + p * 0.35), 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${rgb},${0.85 + p * 0.15})`
         ctx.fill()
       })
 
