@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Cpu, Eye, EyeOff } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage({ onSwitch, onForgot }) {
@@ -26,12 +27,12 @@ export default function LoginPage({ onSwitch, onForgot }) {
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 justify-center mb-8">
+        <Link to="/" className="flex items-center gap-2 justify-center mb-8 no-underline">
           <div className="w-8 h-8 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center">
             <Cpu size={16} className="text-white" />
           </div>
           <span className="font-bold text-text-primary text-lg tracking-tight">GrabberAI</span>
-        </div>
+        </Link>
 
         <div className="bg-bg-secondary border border-bg-border rounded-xl p-8">
           <h1 className="text-xl font-semibold text-text-primary mb-1">Sign in</h1>

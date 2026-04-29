@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { BrowserRouter, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { Cpu } from 'lucide-react'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
@@ -27,9 +28,7 @@ function PendingAccess({ onLogout }) {
   const { refreshUser } = useAuth()
 
   useEffect(() => {
-    const id = setInterval(async () => {
-      await refreshUser()
-    }, 5000)
+    const id = setInterval(async () => { await refreshUser() }, 5000)
     return () => clearInterval(id)
   }, [refreshUser])
 
@@ -55,20 +54,17 @@ function PendingAccess({ onLogout }) {
   )
 }
 
-export default function App() {
+function AppInner() {
   const { user, loading, logout } = useAuth()
   const { activeTab } = useStore()
-  const [authPage, setAuthPage] = useState('login')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [showLanding, setShowLanding] = useState(() => {
-    return !sessionStorage.getItem('landing_passed')
-  })
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  // Detect ?reset_token=... in the URL on first load
-  const [resetToken] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('reset_token') || null
-  })
+  const resetToken = useMemo(
+    () => new URLSearchParams(location.search).get('reset_token'),
+    [location.search]
+  )
 
   useEffect(() => {
     const handler = () => logout()
@@ -76,22 +72,7 @@ export default function App() {
     return () => window.removeEventListener('auth:logout', handler)
   }, [logout])
 
-  // Close sidebar on tab change
   useEffect(() => { setSidebarOpen(false) }, [activeTab])
-
-  if (showLanding) {
-    const enterWith = (page) => {
-      sessionStorage.setItem('landing_passed', '1')
-      setAuthPage(page)
-      setShowLanding(false)
-    }
-    return (
-      <LandingPage
-        onSignIn={() => enterWith('login')}
-        onSignUp={() => enterWith('signup')}
-      />
-    )
-  }
 
   if (loading) {
     return (
@@ -101,13 +82,12 @@ export default function App() {
     )
   }
 
-  // Password reset link takes priority over everything
   if (resetToken) {
     return (
       <ResetPasswordPage
         token={resetToken}
         onDone={() => {
-          window.history.replaceState({}, '', window.location.pathname)
+          window.history.replaceState({}, '', '/')
           window.location.reload()
         }}
       />
@@ -115,10 +95,28 @@ export default function App() {
   }
 
   if (!user) {
-    if (authPage === 'forgot') return <ForgotPasswordPage onBack={() => setAuthPage('login')} />
-    return authPage === 'login'
-      ? <LoginPage onSwitch={() => setAuthPage('signup')} onForgot={() => setAuthPage('forgot')} />
-      : <SignupPage onSwitch={() => setAuthPage('login')} />
+    const p = location.pathname
+    if (p === '/login') {
+      return (
+        <LoginPage
+          onSwitch={() => navigate('/signup')}
+          onForgot={() => navigate('/forgot-password')}
+        />
+      )
+    }
+    if (p === '/signup') return <SignupPage onSwitch={() => navigate('/login')} />
+    if (p === '/forgot-password') return <ForgotPasswordPage onBack={() => navigate('/login')} />
+    return (
+      <LandingPage
+        onSignIn={() => navigate('/login')}
+        onSignUp={() => navigate('/signup')}
+      />
+    )
+  }
+
+  // Logged-in user hitting auth pages → back to app
+  if (['/login', '/signup', '/forgot-password'].includes(location.pathname)) {
+    return <Navigate to="/" replace />
   }
 
   const hasAccess = user.role === 'admin' || ['free', 'subscribed'].includes(user.subscription_status)
@@ -136,5 +134,13 @@ export default function App() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppInner />
+    </BrowserRouter>
   )
 }

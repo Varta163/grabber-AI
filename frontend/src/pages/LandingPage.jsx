@@ -236,27 +236,15 @@ export default function LandingPage({ onSignIn, onSignUp }) {
           }}>GrabberAI</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={onSignIn} style={{
-            background: 'transparent', border: '1px solid rgba(59,130,246,0.4)',
-            borderRadius: '0.5rem', padding: '0.45rem 1.2rem',
-            fontSize: '0.85rem', fontWeight: 500, color: '#93c5fd',
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.7)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)' }}
-          >Sign In</button>
-          <button onClick={onSignUp} style={{
-            background: 'linear-gradient(135deg,#3b82f6,#6d28d9)', border: 'none',
-            borderRadius: '0.5rem', padding: '0.45rem 1.2rem',
-            fontSize: '0.85rem', fontWeight: 600, color: '#fff',
-            cursor: 'pointer', transition: 'all 0.2s',
-            boxShadow: '0 0 14px rgba(59,130,246,0.35)',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 24px rgba(59,130,246,0.6)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 14px rgba(59,130,246,0.35)'; e.currentTarget.style.transform = 'translateY(0)' }}
-          >Sign Up</button>
-        </div>
+        <button onClick={onSignIn} style={{
+          background: 'transparent', border: '1px solid rgba(59,130,246,0.4)',
+          borderRadius: '0.5rem', padding: '0.45rem 1.4rem',
+          fontSize: '0.875rem', fontWeight: 500, color: '#93c5fd',
+          cursor: 'pointer', transition: 'all 0.2s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.7)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)' }}
+        >Sign In</button>
       </header>
 
       {/* ── Hero text (over brain) ── */}
