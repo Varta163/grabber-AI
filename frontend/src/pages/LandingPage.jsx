@@ -222,7 +222,7 @@ export default function LandingPage({ onSignIn, onSignUp }) {
             pointerEvents: 'none',
           }} />
           <img
-            src="/brain.png"
+            src="/brain.jpg"
             alt="Neural AI Brain"
             style={{
               width: '100%', height: '100%',
