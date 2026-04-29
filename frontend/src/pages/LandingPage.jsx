@@ -1,70 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Cpu } from 'lucide-react'
 
-// ── Brain canvas animation ──────────────────────────────────────────────────
-// Nodes distributed in a wide brain shape (cerebrum + cerebellum)
-const RAW_NODES = [
-  // Left hemisphere — top crown
-  { x: 148, y: 90 }, { x: 175, y: 80 },
-  // Left hemisphere — upper
-  { x: 108, y: 118 }, { x: 140, y: 104 }, { x: 170, y: 97 },
-  // Left hemisphere — upper-mid
-  { x: 84, y: 150 }, { x: 116, y: 134 }, { x: 148, y: 124 }, { x: 178, y: 118 },
-  // Left hemisphere — mid
-  { x: 76, y: 182 }, { x: 108, y: 166 }, { x: 140, y: 156 }, { x: 172, y: 150 }, { x: 194, y: 148 },
-  // Left hemisphere — lower-mid
-  { x: 82, y: 214 }, { x: 113, y: 200 }, { x: 144, y: 190 }, { x: 174, y: 184 }, { x: 194, y: 182 },
-  // Left hemisphere — lower
-  { x: 98, y: 242 }, { x: 128, y: 230 }, { x: 158, y: 222 }, { x: 186, y: 217 },
-  // Left hemisphere — bottom
-  { x: 120, y: 262 }, { x: 152, y: 255 }, { x: 180, y: 250 },
-
-  // Right hemisphere — top crown (mirror)
-  { x: 225, y: 80 }, { x: 252, y: 90 },
-  // Right hemisphere — upper
-  { x: 230, y: 97 }, { x: 260, y: 104 }, { x: 292, y: 118 },
-  // Right hemisphere — upper-mid
-  { x: 222, y: 118 }, { x: 252, y: 124 }, { x: 284, y: 134 }, { x: 316, y: 150 },
-  // Right hemisphere — mid
-  { x: 206, y: 148 }, { x: 228, y: 150 }, { x: 260, y: 156 }, { x: 292, y: 166 }, { x: 324, y: 182 },
-  // Right hemisphere — lower-mid
-  { x: 206, y: 182 }, { x: 226, y: 184 }, { x: 256, y: 190 }, { x: 287, y: 200 }, { x: 318, y: 214 },
-  // Right hemisphere — lower
-  { x: 214, y: 217 }, { x: 242, y: 222 }, { x: 272, y: 230 }, { x: 302, y: 242 },
-  // Right hemisphere — bottom
-  { x: 220, y: 250 }, { x: 248, y: 255 }, { x: 280, y: 262 },
-
-  // Cerebellum
-  { x: 165, y: 278 }, { x: 188, y: 285 }, { x: 200, y: 288 }, { x: 212, y: 285 }, { x: 235, y: 278 },
-  { x: 182, y: 302 }, { x: 200, y: 307 }, { x: 218, y: 302 },
-]
-// Orange energy nodes: corners + cerebellum center
-const ORANGE_IDX = new Set([1, 26, 9, 35, 47, 21, 42])
-
-function brainOutlinePath(ctx, s) {
-  ctx.beginPath()
-  ctx.moveTo(200 * s, 70 * s)
-  // Left arc: top → left side → bottom-left
-  ctx.bezierCurveTo(176 * s, 65 * s, 144 * s, 70 * s, 118 * s, 88 * s)
-  ctx.bezierCurveTo(92 * s, 106 * s, 74 * s, 134 * s, 70 * s, 165 * s)
-  ctx.bezierCurveTo(66 * s, 196 * s, 78 * s, 228 * s, 100 * s, 250 * s)
-  ctx.bezierCurveTo(118 * s, 267 * s, 144 * s, 274 * s, 164 * s, 273 * s)
-  // Cerebellum left bump
-  ctx.bezierCurveTo(172 * s, 272 * s, 176 * s, 280 * s, 174 * s, 293 * s)
-  ctx.bezierCurveTo(172 * s, 307 * s, 183 * s, 318 * s, 195 * s, 320 * s)
-  ctx.lineTo(200 * s, 321 * s)
-  ctx.lineTo(205 * s, 320 * s)
-  // Cerebellum right bump
-  ctx.bezierCurveTo(217 * s, 318 * s, 228 * s, 307 * s, 226 * s, 293 * s)
-  ctx.bezierCurveTo(224 * s, 280 * s, 228 * s, 272 * s, 236 * s, 273 * s)
-  // Right arc: bottom-right → right side → top
-  ctx.bezierCurveTo(256 * s, 274 * s, 282 * s, 267 * s, 300 * s, 250 * s)
-  ctx.bezierCurveTo(322 * s, 228 * s, 334 * s, 196 * s, 330 * s, 165 * s)
-  ctx.bezierCurveTo(326 * s, 134 * s, 308 * s, 106 * s, 282 * s, 88 * s)
-  ctx.bezierCurveTo(256 * s, 70 * s, 224 * s, 65 * s, 200 * s, 70 * s)
-  ctx.closePath()
-}
-
+// ── Brain canvas — side-profile with gyri, swirling energy lines & glow ─────
 function BrainCanvas({ size }) {
   const canvasRef = useRef(null)
 
@@ -73,140 +10,214 @@ function BrainCanvas({ size }) {
     const ctx = canvas.getContext('2d')
     const s = size / 400
 
-    const nodes = RAW_NODES.map(n => ({ x: n.x * s, y: n.y * s }))
-
-    const conns = []
-    const maxD = 78 * s
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = nodes[i].x - nodes[j].x
-        const dy = nodes[i].y - nodes[j].y
-        if (Math.sqrt(dx * dx + dy * dy) < maxD) conns.push([i, j])
-      }
+    // ── Brain side-profile path (facing left) ──
+    function makeBrainPath() {
+      const p = new Path2D()
+      p.moveTo(152 * s, 82 * s)
+      // Frontal lobe — front curve
+      p.bezierCurveTo(118 * s, 75 * s, 85 * s, 88 * s, 68 * s, 118 * s)
+      p.bezierCurveTo(52 * s, 148 * s, 52 * s, 185 * s, 65 * s, 215 * s)
+      // Temporal lobe — bottom
+      p.bezierCurveTo(80 * s, 240 * s, 105 * s, 262 * s, 135 * s, 272 * s)
+      p.bezierCurveTo(162 * s, 281 * s, 192 * s, 282 * s, 218 * s, 273 * s)
+      p.bezierCurveTo(242 * s, 265 * s, 258 * s, 248 * s, 264 * s, 228 * s)
+      // Cerebellum notch
+      p.bezierCurveTo(267 * s, 215 * s, 275 * s, 208 * s, 288 * s, 208 * s)
+      // Cerebellum outer
+      p.bezierCurveTo(308 * s, 208 * s, 330 * s, 218 * s, 338 * s, 238 * s)
+      p.bezierCurveTo(346 * s, 258 * s, 338 * s, 280 * s, 320 * s, 288 * s)
+      p.bezierCurveTo(302 * s, 296 * s, 280 * s, 288 * s, 270 * s, 272 * s)
+      // Brain stem
+      p.bezierCurveTo(260 * s, 258 * s, 254 * s, 268 * s, 251 * s, 285 * s)
+      p.bezierCurveTo(248 * s, 302 * s, 251 * s, 322 * s, 257 * s, 338 * s)
+      p.lineTo(260 * s, 348 * s)
+      p.lineTo(245 * s, 350 * s)
+      p.lineTo(241 * s, 338 * s)
+      p.bezierCurveTo(236 * s, 320 * s, 235 * s, 300 * s, 238 * s, 282 * s)
+      p.bezierCurveTo(242 * s, 265 * s, 235 * s, 252 * s, 225 * s, 246 * s)
+      // Occipital lobe — back
+      p.bezierCurveTo(245 * s, 232 * s, 255 * s, 210 * s, 252 * s, 185 * s)
+      p.bezierCurveTo(250 * s, 160 * s, 238 * s, 135 * s, 222 * s, 115 * s)
+      // Parietal lobe — top-right
+      p.bezierCurveTo(208 * s, 95 * s, 188 * s, 80 * s, 168 * s, 76 * s)
+      p.bezierCurveTo(162 * s, 74 * s, 156 * s, 76 * s, 152 * s, 82 * s)
+      p.closePath()
+      return p
     }
 
-    const parts = conns.map((_, i) => ({
-      conn: conns[i],
-      t: i / conns.length,
-      speed: 0.0015 + Math.random() * 0.002,
-    }))
+    // ── Gyri (brain fold lines) — follow contour of brain ──
+    const GYRI = [
+      // Frontal lobe folds (roughly vertical)
+      [[78, 125], [76, 158], [80, 192], [90, 222]],
+      [[96, 108], [94, 142], [98, 175], [110, 208]],
+      [[115, 95], [113, 130], [117, 163], [128, 196]],
+      [[135, 87], [133, 122], [137, 155], [148, 188]],
+      // Parietal folds (arc over top)
+      [[158, 80], [188, 74], [218, 76], [242, 88]],
+      [[155, 98], [185, 92], [216, 94], [238, 106]],
+      [[150, 116], [180, 110], [212, 112], [234, 124]],
+      // Temporal folds (sweep along bottom)
+      [[92, 248], [125, 262], [158, 268], [192, 266]],
+      [[100, 232], [132, 246], [164, 252], [196, 250]],
+      [[112, 216], [142, 230], [172, 236], [200, 234]],
+      // Occipital folds (back curves)
+      [[248, 158], [252, 180], [250, 205], [244, 228]],
+      [[232, 138], [238, 162], [238, 188], [233, 212]],
+      [[215, 120], [222, 146], [222, 172], [218, 198]],
+      // Cerebellum folds
+      [[288, 218], [305, 222], [318, 235], [322, 255]],
+      [[285, 232], [300, 238], [310, 252], [306, 268]],
+    ]
 
-    const phases = nodes.map(() => Math.random() * Math.PI * 2)
+    // ── Swirling energy lines ──
+    const rng = (a, b) => a + Math.random() * (b - a)
+    const SWIRLS = Array.from({ length: 38 }, (_, i) => {
+      const ang = (i / 38) * Math.PI * 2 + rng(-0.3, 0.3)
+      const bx = 180 + rng(-55, 55)
+      const by = 185 + rng(-60, 60)
+      const r1 = rng(100, 160)
+      const r2 = rng(140, 220)
+      const sweep = rng(0.9, 2.2) * (Math.random() > 0.5 ? 1 : -1)
+      return {
+        x0: bx, y0: by,
+        cp1x: bx + Math.cos(ang) * r1,
+        cp1y: by + Math.sin(ang) * r1 * 0.75,
+        cp2x: bx + Math.cos(ang + sweep * 0.6) * r2,
+        cp2y: by + Math.sin(ang + sweep * 0.6) * r2 * 0.75,
+        x1: bx + Math.cos(ang + sweep) * r1 * 0.9,
+        y1: by + Math.sin(ang + sweep) * r1 * 0.7,
+        phase: rng(0, Math.PI * 2),
+        speed: rng(0.15, 0.5),
+        color: Math.random() > 0.3 ? '100,170,255' : '180,140,255',
+      }
+    })
+
+    // ── Energy nodes (orange = hot, blue = cool) ──
+    const NODES = [
+      { x: 148, y: 128, c: '255,185,50',  r: 5.5, phase: 0.0 },
+      { x: 188, y: 90,  c: '255,200,60',  r: 4.5, phase: 1.1 },
+      { x: 228, y: 110, c: '255,175,45',  r: 5.0, phase: 2.2 },
+      { x: 248, y: 152, c: '255,185,50',  r: 4.0, phase: 0.7 },
+      { x: 252, y: 198, c: '255,160,30',  r: 6.0, phase: 1.8 },
+      { x: 208, y: 240, c: '255,185,50',  r: 4.5, phase: 3.1 },
+      { x: 155, y: 252, c: '255,175,45',  r: 4.0, phase: 0.4 },
+      { x: 98,  y: 212, c: '255,185,50',  r: 4.0, phase: 2.5 },
+      { x: 72,  y: 168, c: '255,200,60',  r: 3.5, phase: 1.3 },
+      { x: 165, y: 148, c: '255,175,45',  r: 5.0, phase: 0.9 },
+      { x: 308, y: 248, c: '255,185,50',  r: 5.0, phase: 2.0 },
+      // Blue nodes
+      { x: 178, y: 108, c: '140,200,255', r: 3.0, phase: 1.6 },
+      { x: 212, y: 128, c: '160,210,255', r: 3.0, phase: 2.8 },
+      { x: 238, y: 172, c: '140,200,255', r: 3.0, phase: 0.3 },
+      { x: 230, y: 218, c: '160,210,255', r: 3.0, phase: 1.5 },
+      { x: 175, y: 230, c: '140,200,255', r: 2.8, phase: 3.0 },
+      { x: 125, y: 218, c: '160,210,255', r: 2.8, phase: 0.8 },
+      { x: 108, y: 172, c: '140,200,255', r: 2.8, phase: 2.1 },
+      { x: 125, y: 132, c: '160,210,255', r: 2.8, phase: 1.2 },
+      { x: 325, y: 258, c: '140,200,255', r: 2.5, phase: 0.6 },
+    ]
+
+    const brainPath = makeBrainPath()
     let id
 
     const draw = (ts) => {
       const t = ts / 1000
       ctx.clearRect(0, 0, size, size)
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.65)
 
-      const pulse = 0.5 + 0.5 * Math.sin(t * 0.7)
+      // ── Outer background glow ──
+      const bgG = ctx.createRadialGradient(185*s,188*s,0, 185*s,188*s,210*s)
+      bgG.addColorStop(0, `rgba(18,38,130,${0.28+pulse*0.08})`)
+      bgG.addColorStop(0.55, `rgba(8,18,70,0.18)`)
+      bgG.addColorStop(1, 'transparent')
+      ctx.fillStyle = bgG
+      ctx.fillRect(0, 0, size, size)
 
-      // ── Brain silhouette fill ──
-      brainOutlinePath(ctx, s)
-      const bg = ctx.createRadialGradient(200*s, 185*s, 0, 200*s, 185*s, 160*s)
-      bg.addColorStop(0, `rgba(14,28,80,${0.55 + pulse * 0.08})`)
-      bg.addColorStop(0.6, `rgba(8,16,52,${0.38})`)
-      bg.addColorStop(1, 'rgba(4,8,30,0.15)')
-      ctx.fillStyle = bg
-      ctx.fill()
+      // ── Swirling energy lines (draw behind brain) ──
+      SWIRLS.forEach(sw => {
+        const a = 0.025 + 0.018 * Math.sin(t * sw.speed + sw.phase)
+        ctx.save()
+        ctx.shadowBlur = 10 * s
+        ctx.shadowColor = `rgba(${sw.color},0.6)`
+        ctx.beginPath()
+        ctx.moveTo(sw.x0*s, sw.y0*s)
+        ctx.bezierCurveTo(sw.cp1x*s,sw.cp1y*s, sw.cp2x*s,sw.cp2y*s, sw.x1*s,sw.y1*s)
+        ctx.strokeStyle = `rgba(${sw.color},${a})`
+        ctx.lineWidth = 0.9 * s
+        ctx.stroke()
+        ctx.restore()
+      })
 
-      // ── Brain outline glow ──
+      // ── Brain fill (clipped inside outline) ──
+      ctx.save()
+      ctx.clip(brainPath)
+
+      const fill = ctx.createRadialGradient(178*s,172*s,5*s, 178*s,172*s,210*s)
+      fill.addColorStop(0,   `rgba(30,65,175,${0.72+pulse*0.08})`)
+      fill.addColorStop(0.45,`rgba(18,40,120,0.78)`)
+      fill.addColorStop(1,   `rgba(8,16,55,0.85)`)
+      ctx.fillStyle = fill
+      ctx.fillRect(0, 0, size, size)
+
+      // ── Gyri fold lines (inside clip) ──
+      GYRI.forEach((pts, i) => {
+        const a = 0.22 + 0.08 * Math.sin(t * 0.25 + i * 0.5)
+        ctx.save()
+        ctx.shadowBlur = 5 * s
+        ctx.shadowColor = `rgba(80,150,255,0.5)`
+        ctx.beginPath()
+        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
+        ctx.bezierCurveTo(
+          pts[1][0]*s, pts[1][1]*s,
+          pts[2][0]*s, pts[2][1]*s,
+          pts[3][0]*s, pts[3][1]*s
+        )
+        ctx.strokeStyle = `rgba(90,155,255,${a})`
+        ctx.lineWidth = 1.4 * s
+        ctx.stroke()
+        ctx.restore()
+      })
+
+      ctx.restore() // end clip
+
+      // ── Brain outline — multi-pass glow ──
+      // Wide soft glow
+      ctx.save()
+      ctx.shadowBlur = 45 * s
+      ctx.shadowColor = `rgba(50,120,255,${0.55+pulse*0.3})`
+      ctx.strokeStyle = `rgba(80,160,255,${0.15+pulse*0.08})`
+      ctx.lineWidth = 8 * s
+      ctx.stroke(brainPath)
+      ctx.restore()
+      // Crisp bright outline
       ctx.save()
       ctx.shadowBlur = 18 * s
-      ctx.shadowColor = `rgba(59,130,246,${0.45 + pulse * 0.25})`
-      brainOutlinePath(ctx, s)
-      ctx.strokeStyle = `rgba(59,130,246,${0.35 + pulse * 0.2})`
+      ctx.shadowColor = `rgba(120,190,255,${0.8+pulse*0.2})`
+      ctx.strokeStyle = `rgba(140,200,255,${0.6+pulse*0.3})`
       ctx.lineWidth = 1.8 * s
-      ctx.stroke()
+      ctx.stroke(brainPath)
       ctx.restore()
 
-      // ── Longitudinal fissure (centre groove) ──
-      ctx.save()
-      ctx.strokeStyle = `rgba(20,50,120,0.6)`
-      ctx.lineWidth = 1.2 * s
-      ctx.beginPath()
-      ctx.moveTo(200 * s, 70 * s)
-      ctx.bezierCurveTo(198 * s, 130 * s, 197 * s, 175 * s, 199 * s, 215 * s)
-      ctx.stroke()
-      ctx.restore()
-
-      // ── Sulci (brain groove lines) ──
-      ctx.save()
-      ctx.strokeStyle = 'rgba(40,80,180,0.22)'
-      ctx.lineWidth = 1.0 * s
-      // Left hemisphere sulci
-      const leftSulci = [
-        [[115,105],[122,135],[112,165]],
-        [[155,92],[150,125],[144,158],[135,188]],
-        [[82,198],[112,208],[145,212],[174,210]],
-      ]
-      leftSulci.forEach(pts => {
-        ctx.beginPath()
-        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0]*s, pts[i][1]*s)
-        ctx.stroke()
-      })
-      // Right hemisphere sulci (mirror)
-      const rightSulci = [
-        [[285,105],[278,135],[288,165]],
-        [[245,92],[250,125],[256,158],[265,188]],
-        [[318,198],[288,208],[255,212],[226,210]],
-      ]
-      rightSulci.forEach(pts => {
-        ctx.beginPath()
-        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0]*s, pts[i][1]*s)
-        ctx.stroke()
-      })
-      ctx.restore()
-
-      // ── Neural connections ──
-      conns.forEach(([a, b]) => {
-        const alpha = 0.07 + 0.05 * Math.sin(t * 0.4 + a)
-        ctx.beginPath()
-        ctx.moveTo(nodes[a].x, nodes[a].y)
-        ctx.lineTo(nodes[b].x, nodes[b].y)
-        ctx.strokeStyle = `rgba(110,170,255,${alpha})`
-        ctx.lineWidth = 0.8 * s
-        ctx.stroke()
-      })
-
-      // ── Travelling particles ──
-      parts.forEach(p => {
-        p.t += p.speed
-        if (p.t > 1) p.t = 0
-        const [ai, bi] = p.conn
-        const px = nodes[ai].x + (nodes[bi].x - nodes[ai].x) * p.t
-        const py = nodes[ai].y + (nodes[bi].y - nodes[ai].y) * p.t
-        const pg = ctx.createRadialGradient(px, py, 0, px, py, 5 * s)
-        pg.addColorStop(0, 'rgba(190,220,255,0.95)')
-        pg.addColorStop(1, 'transparent')
-        ctx.fillStyle = pg
-        ctx.beginPath()
-        ctx.arc(px, py, 5 * s, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(px, py, 1.6 * s, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(235,245,255,0.98)'
-        ctx.fill()
-      })
-
-      // ── Nodes ──
-      nodes.forEach((n, i) => {
-        const isOrange = ORANGE_IDX.has(i)
-        const p = 0.5 + 0.5 * Math.sin(t * 1.6 + phases[i])
-        const rgb = isOrange ? '245,158,11' : '80,160,255'
-        const r = (isOrange ? 5.5 : 3.2) * s
-        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5)
-        ng.addColorStop(0, `rgba(${rgb},${0.6 + p * 0.35})`)
+      // ── Energy nodes ──
+      NODES.forEach(n => {
+        const p = 0.5 + 0.5 * Math.sin(t * 1.8 + n.phase)
+        const r = n.r * s
+        ctx.save()
+        ctx.shadowBlur = 20 * s
+        ctx.shadowColor = `rgba(${n.c},0.9)`
+        const ng = ctx.createRadialGradient(n.x*s,n.y*s,0, n.x*s,n.y*s,r*5.5)
+        ng.addColorStop(0, `rgba(${n.c},${0.7+p*0.3})`)
+        ng.addColorStop(0.4, `rgba(${n.c},${0.2+p*0.15})`)
         ng.addColorStop(1, 'transparent')
         ctx.fillStyle = ng
         ctx.beginPath()
-        ctx.arc(n.x, n.y, r * 5, 0, Math.PI * 2)
+        ctx.arc(n.x*s, n.y*s, r*5.5, 0, Math.PI*2)
         ctx.fill()
         ctx.beginPath()
-        ctx.arc(n.x, n.y, r * (0.65 + p * 0.35), 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${rgb},${0.85 + p * 0.15})`
+        ctx.arc(n.x*s, n.y*s, r*(0.55+p*0.45), 0, Math.PI*2)
+        ctx.fillStyle = `rgba(${n.c},1)`
         ctx.fill()
+        ctx.restore()
       })
 
       id = requestAnimationFrame(draw)
@@ -259,11 +270,11 @@ export default function LandingPage({ onSignIn, onSignUp }) {
     return () => clearInterval(id)
   }, [])
 
-  const brainSize = Math.min(420, typeof window !== 'undefined' ? window.innerWidth * 0.75 : 380)
+  const brainSize = Math.min(460, typeof window !== 'undefined' ? window.innerWidth * 0.82 : 400)
 
   return (
     <div style={{
-      height: '100vh', background: '#0a0a0f',
+      height: '100vh', background: '#060610',
       display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
       fontFamily: 'Inter, system-ui, sans-serif',
@@ -272,33 +283,27 @@ export default function LandingPage({ onSignIn, onSignUp }) {
       {/* Ambient glow */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 65% 55% at 50% 50%, rgba(59,130,246,0.11) 0%, transparent 70%)',
-      }} />
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 40% 40% at 50% 52%, rgba(139,92,246,0.07) 0%, transparent 65%)',
+        background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(30,80,200,0.13) 0%, transparent 70%)',
       }} />
 
-      {/* Brain canvas (absolute centre) */}
+      {/* Brain canvas centred */}
       <div style={{
-        position: 'absolute',
-        top: '50%', left: '50%',
+        position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
         zIndex: 1, pointerEvents: 'none',
-        animation: 'brainFloat 6s ease-in-out infinite',
-        filter: 'drop-shadow(0 0 40px rgba(59,130,246,0.35)) drop-shadow(0 0 80px rgba(139,92,246,0.2))',
+        animation: 'brainFloat 7s ease-in-out infinite',
       }}>
         <BrainCanvas size={brainSize} />
       </div>
 
-      {/* Particles */}
+      {/* Ambient particles */}
       {PARTICLES.map(p => (
         <div key={p.id} style={{
           position: 'absolute', left: `${p.x}%`, top: `${p.y}%`,
           width: p.size, height: p.size, borderRadius: '50%',
           background: p.color, boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
           animation: `floatP ${p.duration}s ${p.delay}s ease-in-out infinite alternate`,
-          opacity: 0.55, zIndex: 1, pointerEvents: 'none',
+          opacity: 0.45, zIndex: 1, pointerEvents: 'none',
         }} />
       ))}
 
@@ -306,14 +311,14 @@ export default function LandingPage({ onSignIn, onSignUp }) {
       <header style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '1.25rem 2rem', position: 'relative', zIndex: 20,
-        borderBottom: '1px solid rgba(30,30,46,0.5)',
+        borderBottom: '1px solid rgba(30,30,60,0.5)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8,
             background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 12px rgba(59,130,246,0.45)',
+            boxShadow: '0 0 12px rgba(59,130,246,0.5)',
           }}>
             <Cpu size={16} color="#fff" />
           </div>
@@ -335,7 +340,7 @@ export default function LandingPage({ onSignIn, onSignUp }) {
         >Sign In</button>
       </header>
 
-      {/* ── Hero text (over brain) ── */}
+      {/* ── Hero text ── */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
@@ -440,7 +445,7 @@ export default function LandingPage({ onSignIn, onSignUp }) {
       }} />
 
       <style>{`
-        @keyframes brainFloat { 0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-14px)} }
+        @keyframes brainFloat { 0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-12px)} }
         @keyframes floatP { 0%{transform:translateY(0) translateX(0);opacity:.3} 100%{transform:translateY(-18px) translateX(8px);opacity:.8} }
         @keyframes nodePulse { 0%{opacity:.3;transform:scale(.7)} 100%{opacity:1;transform:scale(1.4)} }
         @keyframes ctaPulse { 0%,100%{box-shadow:0 0 28px rgba(59,130,246,.5),0 0 56px rgba(139,92,246,.25)} 50%{box-shadow:0 0 38px rgba(59,130,246,.7),0 0 76px rgba(139,92,246,.4)} }
