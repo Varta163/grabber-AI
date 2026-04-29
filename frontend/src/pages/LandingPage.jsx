@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { Cpu } from 'lucide-react'
 
-// ── Brain canvas — side-profile with gyri, swirling energy lines & glow ─────
+// ── Brain canvas — neural network nodes with glowing connections ─────────────
+const RAW_NODES = [
+  { x: 200, y: 76 },
+  { x: 152, y: 96 }, { x: 200, y: 89 }, { x: 248, y: 96 },
+  { x: 118, y: 132 }, { x: 163, y: 113 }, { x: 206, y: 109 }, { x: 249, y: 115 }, { x: 286, y: 134 },
+  { x: 103, y: 170 }, { x: 143, y: 154 }, { x: 184, y: 147 }, { x: 225, y: 151 }, { x: 264, y: 157 }, { x: 295, y: 172 },
+  { x: 113, y: 210 }, { x: 153, y: 198 }, { x: 193, y: 191 }, { x: 234, y: 195 }, { x: 271, y: 206 },
+  { x: 139, y: 240 }, { x: 179, y: 232 }, { x: 219, y: 233 }, { x: 255, y: 240 },
+  { x: 173, y: 264 }, { x: 214, y: 267 },
+  { x: 194, y: 294 },
+]
+const ORANGE_IDX = new Set([0, 5, 14, 19, 24])
+
 function BrainCanvas({ size }) {
   const canvasRef = useRef(null)
 
@@ -10,214 +22,100 @@ function BrainCanvas({ size }) {
     const ctx = canvas.getContext('2d')
     const s = size / 400
 
-    // ── Brain side-profile path (facing left) ──
-    function makeBrainPath() {
-      const p = new Path2D()
-      p.moveTo(152 * s, 82 * s)
-      // Frontal lobe — front curve
-      p.bezierCurveTo(118 * s, 75 * s, 85 * s, 88 * s, 68 * s, 118 * s)
-      p.bezierCurveTo(52 * s, 148 * s, 52 * s, 185 * s, 65 * s, 215 * s)
-      // Temporal lobe — bottom
-      p.bezierCurveTo(80 * s, 240 * s, 105 * s, 262 * s, 135 * s, 272 * s)
-      p.bezierCurveTo(162 * s, 281 * s, 192 * s, 282 * s, 218 * s, 273 * s)
-      p.bezierCurveTo(242 * s, 265 * s, 258 * s, 248 * s, 264 * s, 228 * s)
-      // Cerebellum notch
-      p.bezierCurveTo(267 * s, 215 * s, 275 * s, 208 * s, 288 * s, 208 * s)
-      // Cerebellum outer
-      p.bezierCurveTo(308 * s, 208 * s, 330 * s, 218 * s, 338 * s, 238 * s)
-      p.bezierCurveTo(346 * s, 258 * s, 338 * s, 280 * s, 320 * s, 288 * s)
-      p.bezierCurveTo(302 * s, 296 * s, 280 * s, 288 * s, 270 * s, 272 * s)
-      // Brain stem
-      p.bezierCurveTo(260 * s, 258 * s, 254 * s, 268 * s, 251 * s, 285 * s)
-      p.bezierCurveTo(248 * s, 302 * s, 251 * s, 322 * s, 257 * s, 338 * s)
-      p.lineTo(260 * s, 348 * s)
-      p.lineTo(245 * s, 350 * s)
-      p.lineTo(241 * s, 338 * s)
-      p.bezierCurveTo(236 * s, 320 * s, 235 * s, 300 * s, 238 * s, 282 * s)
-      p.bezierCurveTo(242 * s, 265 * s, 235 * s, 252 * s, 225 * s, 246 * s)
-      // Occipital lobe — back
-      p.bezierCurveTo(245 * s, 232 * s, 255 * s, 210 * s, 252 * s, 185 * s)
-      p.bezierCurveTo(250 * s, 160 * s, 238 * s, 135 * s, 222 * s, 115 * s)
-      // Parietal lobe — top-right
-      p.bezierCurveTo(208 * s, 95 * s, 188 * s, 80 * s, 168 * s, 76 * s)
-      p.bezierCurveTo(162 * s, 74 * s, 156 * s, 76 * s, 152 * s, 82 * s)
-      p.closePath()
-      return p
+    const nodes = RAW_NODES.map(n => ({ x: n.x * s, y: n.y * s }))
+
+    const conns = []
+    const maxD = 92 * s
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x
+        const dy = nodes[i].y - nodes[j].y
+        if (Math.sqrt(dx * dx + dy * dy) < maxD) conns.push([i, j])
+      }
     }
 
-    // ── Gyri (brain fold lines) — follow contour of brain ──
-    const GYRI = [
-      // Frontal lobe folds (roughly vertical)
-      [[78, 125], [76, 158], [80, 192], [90, 222]],
-      [[96, 108], [94, 142], [98, 175], [110, 208]],
-      [[115, 95], [113, 130], [117, 163], [128, 196]],
-      [[135, 87], [133, 122], [137, 155], [148, 188]],
-      // Parietal folds (arc over top)
-      [[158, 80], [188, 74], [218, 76], [242, 88]],
-      [[155, 98], [185, 92], [216, 94], [238, 106]],
-      [[150, 116], [180, 110], [212, 112], [234, 124]],
-      // Temporal folds (sweep along bottom)
-      [[92, 248], [125, 262], [158, 268], [192, 266]],
-      [[100, 232], [132, 246], [164, 252], [196, 250]],
-      [[112, 216], [142, 230], [172, 236], [200, 234]],
-      // Occipital folds (back curves)
-      [[248, 158], [252, 180], [250, 205], [244, 228]],
-      [[232, 138], [238, 162], [238, 188], [233, 212]],
-      [[215, 120], [222, 146], [222, 172], [218, 198]],
-      // Cerebellum folds
-      [[288, 218], [305, 222], [318, 235], [322, 255]],
-      [[285, 232], [300, 238], [310, 252], [306, 268]],
-    ]
+    const parts = conns.map((c, i) => ({
+      conn: c, t: i / conns.length,
+      speed: 0.0018 + Math.random() * 0.0025,
+    }))
 
-    // ── Swirling energy lines ──
-    const rng = (a, b) => a + Math.random() * (b - a)
-    const SWIRLS = Array.from({ length: 38 }, (_, i) => {
-      const ang = (i / 38) * Math.PI * 2 + rng(-0.3, 0.3)
-      const bx = 180 + rng(-55, 55)
-      const by = 185 + rng(-60, 60)
-      const r1 = rng(100, 160)
-      const r2 = rng(140, 220)
-      const sweep = rng(0.9, 2.2) * (Math.random() > 0.5 ? 1 : -1)
-      return {
-        x0: bx, y0: by,
-        cp1x: bx + Math.cos(ang) * r1,
-        cp1y: by + Math.sin(ang) * r1 * 0.75,
-        cp2x: bx + Math.cos(ang + sweep * 0.6) * r2,
-        cp2y: by + Math.sin(ang + sweep * 0.6) * r2 * 0.75,
-        x1: bx + Math.cos(ang + sweep) * r1 * 0.9,
-        y1: by + Math.sin(ang + sweep) * r1 * 0.7,
-        phase: rng(0, Math.PI * 2),
-        speed: rng(0.15, 0.5),
-        color: Math.random() > 0.3 ? '100,170,255' : '180,140,255',
-      }
-    })
-
-    // ── Energy nodes (orange = hot, blue = cool) ──
-    const NODES = [
-      { x: 148, y: 128, c: '255,185,50',  r: 5.5, phase: 0.0 },
-      { x: 188, y: 90,  c: '255,200,60',  r: 4.5, phase: 1.1 },
-      { x: 228, y: 110, c: '255,175,45',  r: 5.0, phase: 2.2 },
-      { x: 248, y: 152, c: '255,185,50',  r: 4.0, phase: 0.7 },
-      { x: 252, y: 198, c: '255,160,30',  r: 6.0, phase: 1.8 },
-      { x: 208, y: 240, c: '255,185,50',  r: 4.5, phase: 3.1 },
-      { x: 155, y: 252, c: '255,175,45',  r: 4.0, phase: 0.4 },
-      { x: 98,  y: 212, c: '255,185,50',  r: 4.0, phase: 2.5 },
-      { x: 72,  y: 168, c: '255,200,60',  r: 3.5, phase: 1.3 },
-      { x: 165, y: 148, c: '255,175,45',  r: 5.0, phase: 0.9 },
-      { x: 308, y: 248, c: '255,185,50',  r: 5.0, phase: 2.0 },
-      // Blue nodes
-      { x: 178, y: 108, c: '140,200,255', r: 3.0, phase: 1.6 },
-      { x: 212, y: 128, c: '160,210,255', r: 3.0, phase: 2.8 },
-      { x: 238, y: 172, c: '140,200,255', r: 3.0, phase: 0.3 },
-      { x: 230, y: 218, c: '160,210,255', r: 3.0, phase: 1.5 },
-      { x: 175, y: 230, c: '140,200,255', r: 2.8, phase: 3.0 },
-      { x: 125, y: 218, c: '160,210,255', r: 2.8, phase: 0.8 },
-      { x: 108, y: 172, c: '140,200,255', r: 2.8, phase: 2.1 },
-      { x: 125, y: 132, c: '160,210,255', r: 2.8, phase: 1.2 },
-      { x: 325, y: 258, c: '140,200,255', r: 2.5, phase: 0.6 },
-    ]
-
-    const brainPath = makeBrainPath()
+    const phases = nodes.map(() => Math.random() * Math.PI * 2)
     let id
 
     const draw = (ts) => {
       const t = ts / 1000
       ctx.clearRect(0, 0, size, size)
-      const pulse = 0.5 + 0.5 * Math.sin(t * 0.65)
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.7)
 
-      // ── Outer background glow ──
-      const bgG = ctx.createRadialGradient(185*s,188*s,0, 185*s,188*s,210*s)
-      bgG.addColorStop(0, `rgba(18,38,130,${0.28+pulse*0.08})`)
-      bgG.addColorStop(0.55, `rgba(8,18,70,0.18)`)
-      bgG.addColorStop(1, 'transparent')
-      ctx.fillStyle = bgG
-      ctx.fillRect(0, 0, size, size)
+      // Body glow
+      const bg = ctx.createRadialGradient(size*.5,size*.46,0, size*.5,size*.46,size*.44)
+      bg.addColorStop(0, `rgba(12,25,70,${0.32+pulse*0.08})`)
+      bg.addColorStop(0.65, 'rgba(8,15,50,0.15)')
+      bg.addColorStop(1, 'transparent')
+      ctx.fillStyle = bg
+      ctx.beginPath()
+      ctx.ellipse(size*.5, size*.46, size*.44, size*.4, 0, 0, Math.PI*2)
+      ctx.fill()
 
-      // ── Swirling energy lines (draw behind brain) ──
-      SWIRLS.forEach(sw => {
-        const a = 0.025 + 0.018 * Math.sin(t * sw.speed + sw.phase)
-        ctx.save()
-        ctx.shadowBlur = 10 * s
-        ctx.shadowColor = `rgba(${sw.color},0.6)`
-        ctx.beginPath()
-        ctx.moveTo(sw.x0*s, sw.y0*s)
-        ctx.bezierCurveTo(sw.cp1x*s,sw.cp1y*s, sw.cp2x*s,sw.cp2y*s, sw.x1*s,sw.y1*s)
-        ctx.strokeStyle = `rgba(${sw.color},${a})`
-        ctx.lineWidth = 0.9 * s
-        ctx.stroke()
-        ctx.restore()
-      })
-
-      // ── Brain fill (clipped inside outline) ──
+      // Outer ring
       ctx.save()
-      ctx.clip(brainPath)
-
-      const fill = ctx.createRadialGradient(178*s,172*s,5*s, 178*s,172*s,210*s)
-      fill.addColorStop(0,   `rgba(30,65,175,${0.72+pulse*0.08})`)
-      fill.addColorStop(0.45,`rgba(18,40,120,0.78)`)
-      fill.addColorStop(1,   `rgba(8,16,55,0.85)`)
-      ctx.fillStyle = fill
-      ctx.fillRect(0, 0, size, size)
-
-      // ── Gyri fold lines (inside clip) ──
-      GYRI.forEach((pts, i) => {
-        const a = 0.22 + 0.08 * Math.sin(t * 0.25 + i * 0.5)
-        ctx.save()
-        ctx.shadowBlur = 5 * s
-        ctx.shadowColor = `rgba(80,150,255,0.5)`
-        ctx.beginPath()
-        ctx.moveTo(pts[0][0]*s, pts[0][1]*s)
-        ctx.bezierCurveTo(
-          pts[1][0]*s, pts[1][1]*s,
-          pts[2][0]*s, pts[2][1]*s,
-          pts[3][0]*s, pts[3][1]*s
-        )
-        ctx.strokeStyle = `rgba(90,155,255,${a})`
-        ctx.lineWidth = 1.4 * s
-        ctx.stroke()
-        ctx.restore()
-      })
-
-      ctx.restore() // end clip
-
-      // ── Brain outline — multi-pass glow ──
-      // Wide soft glow
-      ctx.save()
-      ctx.shadowBlur = 45 * s
-      ctx.shadowColor = `rgba(50,120,255,${0.55+pulse*0.3})`
-      ctx.strokeStyle = `rgba(80,160,255,${0.15+pulse*0.08})`
-      ctx.lineWidth = 8 * s
-      ctx.stroke(brainPath)
-      ctx.restore()
-      // Crisp bright outline
-      ctx.save()
-      ctx.shadowBlur = 18 * s
-      ctx.shadowColor = `rgba(120,190,255,${0.8+pulse*0.2})`
-      ctx.strokeStyle = `rgba(140,200,255,${0.6+pulse*0.3})`
-      ctx.lineWidth = 1.8 * s
-      ctx.stroke(brainPath)
+      ctx.shadowBlur = 20 * s
+      ctx.shadowColor = `rgba(59,130,246,${0.5+pulse*0.3})`
+      ctx.beginPath()
+      ctx.ellipse(size*.5, size*.46, size*.45, size*.41, 0, 0, Math.PI*2)
+      ctx.strokeStyle = `rgba(59,130,246,${0.18+pulse*0.14})`
+      ctx.lineWidth = 1.5 * s
+      ctx.stroke()
       ctx.restore()
 
-      // ── Energy nodes ──
-      NODES.forEach(n => {
-        const p = 0.5 + 0.5 * Math.sin(t * 1.8 + n.phase)
-        const r = n.r * s
-        ctx.save()
-        ctx.shadowBlur = 20 * s
-        ctx.shadowColor = `rgba(${n.c},0.9)`
-        const ng = ctx.createRadialGradient(n.x*s,n.y*s,0, n.x*s,n.y*s,r*5.5)
-        ng.addColorStop(0, `rgba(${n.c},${0.7+p*0.3})`)
-        ng.addColorStop(0.4, `rgba(${n.c},${0.2+p*0.15})`)
+      // Connections
+      conns.forEach(([a, b]) => {
+        const alpha = 0.07 + 0.05 * Math.sin(t * 0.4 + a)
+        ctx.beginPath()
+        ctx.moveTo(nodes[a].x, nodes[a].y)
+        ctx.lineTo(nodes[b].x, nodes[b].y)
+        ctx.strokeStyle = `rgba(100,165,255,${alpha})`
+        ctx.lineWidth = 0.8 * s
+        ctx.stroke()
+      })
+
+      // Travelling particles
+      parts.forEach(p => {
+        p.t += p.speed
+        if (p.t > 1) p.t = 0
+        const [ai, bi] = p.conn
+        const px = nodes[ai].x + (nodes[bi].x - nodes[ai].x) * p.t
+        const py = nodes[ai].y + (nodes[bi].y - nodes[ai].y) * p.t
+        const pg = ctx.createRadialGradient(px, py, 0, px, py, 5*s)
+        pg.addColorStop(0, 'rgba(190,220,255,0.95)')
+        pg.addColorStop(1, 'transparent')
+        ctx.fillStyle = pg
+        ctx.beginPath()
+        ctx.arc(px, py, 5*s, 0, Math.PI*2)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(px, py, 1.8*s, 0, Math.PI*2)
+        ctx.fillStyle = 'rgba(235,245,255,0.98)'
+        ctx.fill()
+      })
+
+      // Nodes
+      nodes.forEach((n, i) => {
+        const isOrange = ORANGE_IDX.has(i)
+        const p = 0.5 + 0.5 * Math.sin(t * 1.6 + phases[i])
+        const rgb = isOrange ? '245,158,11' : '80,160,255'
+        const r = (isOrange ? 5.5 : 3.2) * s
+        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r*5)
+        ng.addColorStop(0, `rgba(${rgb},${0.6+p*0.35})`)
         ng.addColorStop(1, 'transparent')
         ctx.fillStyle = ng
         ctx.beginPath()
-        ctx.arc(n.x*s, n.y*s, r*5.5, 0, Math.PI*2)
+        ctx.arc(n.x, n.y, r*5, 0, Math.PI*2)
         ctx.fill()
         ctx.beginPath()
-        ctx.arc(n.x*s, n.y*s, r*(0.55+p*0.45), 0, Math.PI*2)
-        ctx.fillStyle = `rgba(${n.c},1)`
+        ctx.arc(n.x, n.y, r*(0.65+p*0.35), 0, Math.PI*2)
+        ctx.fillStyle = `rgba(${rgb},${0.85+p*0.15})`
         ctx.fill()
-        ctx.restore()
       })
 
       id = requestAnimationFrame(draw)
