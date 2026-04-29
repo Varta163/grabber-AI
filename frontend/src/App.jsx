@@ -80,11 +80,16 @@ export default function App() {
   useEffect(() => { setSidebarOpen(false) }, [activeTab])
 
   if (showLanding) {
+    const enterWith = (page) => {
+      sessionStorage.setItem('landing_passed', '1')
+      setAuthPage(page)
+      setShowLanding(false)
+    }
     return (
-      <LandingPage onEnter={() => {
-        sessionStorage.setItem('landing_passed', '1')
-        setShowLanding(false)
-      }} />
+      <LandingPage
+        onSignIn={() => enterWith('login')}
+        onSignUp={() => enterWith('signup')}
+      />
     )
   }
 
